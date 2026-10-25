@@ -172,6 +172,8 @@ tr.tellrow td{background:var(--soft)}
     <span style="font-size:13px;color:var(--muted)">So you can take tasks and see your own.</span>
   </div>
 
+  <div id="locked" class="notice" hidden>This is the family's private planning page. Please open it using the link the family sent you. If you'd like to share a photo of Ivor, please use the <a href="share.html">photo page</a>.</div>
+
   <div id="offline" class="notice" hidden>The list couldn't connect just now. Check your signal and reopen the page. Anything you add won't be saved until it connects.</div>
 
   <nav class="tabs" role="tablist">
@@ -253,7 +255,7 @@ tr.tellrow td{background:var(--soft)}
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <datalist id="people"></datalist>
 
-<script src="config.js?v=2"></script>
+<script src="config.js?v=3"></script>
 <script>
 const SECTIONS=["Monday","This week","Before the funeral","On the day","Afterwards"];
 const FAMILY=["Mum","Charl","Tom","Ben"];
@@ -262,6 +264,12 @@ let tasks=[], guests=[], feedback=[], loaded=false, filter="all", open=new Set()
 let photos=[], suggestions=[], PLACES=[], APPROVER="Mum";
 const $=s=>document.querySelector(s);
 const store={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+/* the family key arrives in the link (#k=...), is remembered on this device, then hidden from the address bar */
+(function(){const m=/[#&]k=([A-Za-z0-9]+)/.exec(location.hash||"");if(m){store.set("famKey",m[1]);
+  const rest=location.hash.replace(/[#&]k=[A-Za-z0-9]+/,"").replace(/^&/,"#");try{history.replaceState(null,"",location.pathname+location.search+(rest&&rest!=="#"?rest:""))}catch(e){}}})();
+const famKey=()=>store.get("famKey")||"";
+function locked(){document.querySelector(".me").hidden=true;document.querySelector(".tabs").hidden=true;
+  ["#panelTasks","#panelGuests","#panelDrafts","#offline"].forEach(s=>$(s).hidden=true);$("#locked").hidden=false;$("#progressText").textContent="Private"}
 const myNameEl=$("#myName"); myNameEl.value=store.get("myName")||"";
 myNameEl.addEventListener("input",()=>{store.set("myName",myNameEl.value.trim());render();renderPhotos()});
 const me=()=>myNameEl.value.trim();
@@ -274,10 +282,11 @@ async function api(fn,...args){
   const url=(window.PLAN_CONFIG||{}).SCRIPT_URL;
   if(!url)throw new Error("This page isn't connected yet.");
   let res;
-  try{res=await fetch(url,{method:"POST",credentials:"omit",redirect:"follow",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({fn,args})})}
+  try{res=await fetch(url,{method:"POST",credentials:"omit",redirect:"follow",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({fn,args,key:famKey()})})}
   catch(e){$("#offline").hidden=false;throw new Error("Couldn't connect. Check your signal and try again.")}
   let j; try{j=JSON.parse(await res.text())}catch(e){throw new Error("The list is busy. Try again in a minute.")}
   $("#offline").hidden=true;
+  if(!j.ok&&j.error==="NO_KEY"){locked();throw new Error("This is the family's private page.")}
   if(!j.ok)throw new Error(j.error||"That didn't save. Try again.");
   return j.data;
 }
@@ -290,7 +299,7 @@ async function change(fn,args,okMsg){
 let busy=false;
 async function refresh(){
   if(busy)return; busy=true;
-  try{apply(await api("getAll"))}catch(e){if(!loaded){$("#progressText").textContent="Not connected";$("#offline").hidden=false}}
+  try{apply(await api("getAll"))}catch(e){if(!loaded&&$("#locked").hidden){$("#progressText").textContent="Not connected";$("#offline").hidden=false}}
   finally{busy=false}
 }
 /* don't redraw under someone's fingers: skip a scheduled refresh while they're typing in a task */
