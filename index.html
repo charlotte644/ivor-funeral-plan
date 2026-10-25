@@ -93,6 +93,15 @@ tr:last-child td{border-bottom:none}
 td.status button{font-size:13px;padding:4px 10px;min-height:30px;border-radius:99px}
 td.status button[aria-pressed="true"]{background:var(--done);color:var(--surface);border-color:var(--done)}
 .empty{color:var(--muted);text-align:center;padding:24px 12px}
+td a{color:var(--accent)}
+.sub{color:var(--muted);font-size:12px}
+.told{font-size:13px;color:var(--done);font-weight:600}
+tr.tellrow td{background:var(--soft)}
+.tell{display:flex;flex-direction:column;gap:10px}
+.tell .lbl{font-size:13px;font-weight:600;color:var(--muted)}
+.tell .chips{display:flex;flex-wrap:wrap;gap:6px}
+.tellfields{display:flex;flex-wrap:wrap;gap:10px}
+.tellfields label{display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:600;color:var(--muted)}
 .notice{background:var(--surface);border:1px solid var(--line);border-left-width:4px;border-left-color:var(--daffodil);border-radius:8px;padding:10px 14px;font-size:14px}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom, 0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 16px;border-radius:99px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none;max-width:calc(100% - 32px);text-align:center}
 .toast.show{opacity:1}
@@ -109,7 +118,7 @@ td.status button[aria-pressed="true"]{background:var(--done);color:var(--surface
 .fbform input{flex:1;min-width:0;font-size:13px;padding:6px 8px}
 .fbform button{font-size:13px;padding:4px 10px;min-height:32px}
 .vh{position:absolute;left:-9999px}
-@media (max-width:520px){.detail{padding-left:14px}}
+@media (max-width:520px){.detail{padding-left:14px}th,td{padding:8px}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
@@ -170,21 +179,22 @@ td.status button[aria-pressed="true"]{background:var(--done);color:var(--surface
   <div id="panelGuests" class="panel" role="tabpanel" hidden>
     <div class="guests-head">
       <h2>Who to invite</h2>
-      <p>Add anyone who should hear about the funeral, with their email address so the invitation can be emailed, or their Facebook name if there's no email. Tick them off once they've been sent it.</p>
+      <p>Add anyone who should hear about the funeral, with whatever contact details you have: mobile, email, or their Facebook or Instagram name. Once someone has been told, tap <b>Not yet</b> to note who contacted them, how and when.</p>
     </div>
     <form class="add" id="addGuest">
       <div class="fields">
         <input id="gName" placeholder="Name" required>
         <input id="gRel" placeholder="How they knew Ivor (e.g. old workmate)">
+        <input id="gMobile" type="tel" placeholder="Mobile number" autocomplete="off">
         <input id="gEmail" type="email" placeholder="Email address" autocomplete="off">
-        <input id="gFb" placeholder="Facebook name (if no email)">
+        <input id="gSocials" placeholder="Socials (e.g. Facebook: Jean Smith)" autocomplete="off">
       </div>
       <div><button class="primary" type="submit">Add to guest list</button></div>
     </form>
     <div class="gtable">
       <table>
-        <thead><tr><th>Name</th><th>Connection</th><th>Email</th><th>Facebook</th><th>Added by</th><th>Told?</th><th><span class="vh">Remove</span></th></tr></thead>
-        <tbody id="guestRows"><tr><td colspan="7" class="empty">Loading…</td></tr></tbody>
+        <thead><tr><th>Name</th><th>Contact details</th><th>Contacted?</th><th><span class="vh">Remove</span></th></tr></thead>
+        <tbody id="guestRows"><tr><td colspan="4" class="empty">Loading…</td></tr></tbody>
       </table>
     </div>
   </div>
@@ -412,20 +422,50 @@ $("#addTask").addEventListener("submit",async e=>{
 });
 
 /* ---- guests ---- */
+const HOW=["Phone call","Text or WhatsApp","Email","Facebook","Instagram","In person","Other"];
+const today=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
+const nice=s=>{const m=/^(\d{4})-(\d\d)-(\d\d)/.exec(s||"");return m?new Date(+m[1],m[2]-1,+m[3]).toLocaleDateString("en-GB",{day:"numeric",month:"short"}):esc(s)};
+let telling=null; /* guest id whose "who contacted them" form is open */
 function renderGuests(){
   const told=guests.filter(g=>g.told).length;
   $("#guestCount").textContent=guests.length?`(${guests.length})`:"";
   const tb=$("#guestRows");
-  if(!guests.length){tb.innerHTML=`<tr><td colspan="7" class="empty">${loaded?"No names yet. Add the first person above.":"Loading…"}</td></tr>`;return}
-  tb.innerHTML=guests.map(g=>`<tr>
-    <td><strong>${esc(g.name)}</strong></td><td>${esc(g.relation)}</td><td style="word-break:break-all">${esc(g.email)}</td><td>${esc(g.facebook)}</td><td>${esc(g.addedBy)}</td>
-    <td class="status"><button data-g="told" data-id="${g.id}" aria-pressed="${!!g.told}">${g.told?"Told":"Not yet"}</button></td>
-    <td><button class="link" data-g="del" data-id="${g.id}" data-confirm="0">Remove</button></td></tr>`).join("")+
-    `<tr><td colspan="7" style="color:var(--muted);font-size:13px">${guests.length} people · ${told} told</td></tr>`;
+  if(!guests.length){tb.innerHTML=`<tr><td colspan="4" class="empty">${loaded?"No names yet. Add the first person above.":"Loading…"}</td></tr>`;return}
+  if(typing()&&document.activeElement.closest("#guestRows"))return;
+  tb.innerHTML=guests.map(g=>{
+    const contact=[g.mobile&&`<a href="tel:${esc(g.mobile.replace(/\s+/g,""))}">${esc(g.mobile)}</a>`,g.email&&`<a href="mailto:${esc(g.email)}" style="word-break:break-all">${esc(g.email)}</a>`,g.socials&&esc(g.socials)].filter(Boolean).join("<br>")||`<span style="color:var(--muted)">None yet</span>`;
+    const status=g.told
+      ?`<span class="told">${esc(g.toldBy||"Someone")}${g.toldHow?" · "+esc(g.toldHow):""}${g.toldOn?" · "+nice(g.toldOn):""}</span><br><button class="link" data-g="untell" data-id="${g.id}">Undo</button>`
+      :`<button data-g="tell" data-id="${g.id}" aria-pressed="false">Not yet</button>`;
+    const by=FAMILY.includes(me())?me():FAMILY[0];
+    const form=telling===g.id&&!g.told?`<tr class="tellrow"><td colspan="4"><div class="tell">
+        <span class="lbl">Who contacted ${esc(g.name)}?</span>
+        <div class="chips">${FAMILY.map(n=>`<button class="chip" data-g="who" data-name="${esc(n)}" data-id="${g.id}" aria-pressed="${n===by}">${esc(n)}</button>`).join("")}</div>
+        <div class="tellfields">
+          <label>How <select id="how-${g.id}">${HOW.map(h=>`<option>${h}</option>`).join("")}</select></label>
+          <label>When <input type="date" id="on-${g.id}" value="${today()}" max="${today()}"></label>
+        </div>
+        <div class="chips"><button class="primary" data-g="savetell" data-id="${g.id}">Save</button><button data-g="cancel" data-id="${g.id}">Cancel</button></div>
+      </div></td></tr>`:"";
+    return `<tr>
+    <td><strong>${esc(g.name)}</strong>${g.relation?`<br><small class="sub">${esc(g.relation)}</small>`:""}${g.addedBy?`<br><small class="sub">Added by ${esc(g.addedBy)}</small>`:""}</td>
+    <td>${contact}</td>
+    <td class="status">${status}</td>
+    <td><button class="link" data-g="del" data-id="${g.id}" data-confirm="0">Remove</button></td></tr>${form}`}).join("")+
+    `<tr><td colspan="4" style="color:var(--muted);font-size:13px">${guests.length} people · ${told} contacted</td></tr>`;
 }
 $("#guestRows").addEventListener("click",async e=>{
   const b=e.target.closest("[data-g]"); if(!b)return; const g=guests.find(x=>x.id===b.dataset.id); if(!g)return;
-  if(b.dataset.g==="told"){g.told=!g.told;renderGuests();await change("setTold",[g.id,g.told])}
+  if(b.dataset.g==="tell"){telling=g.id;renderGuests();return}
+  if(b.dataset.g==="cancel"){telling=null;renderGuests();return}
+  if(b.dataset.g==="who"){b.parentNode.querySelectorAll(".chip").forEach(c=>c.setAttribute("aria-pressed",c===b));return}
+  if(b.dataset.g==="savetell"){
+    const row=b.closest(".tell"); const who=row.querySelector('.chip[aria-pressed="true"]');
+    const info={by:who?who.dataset.name:"",how:$("#how-"+g.id).value,on:$("#on-"+g.id).value||today()};
+    telling=null; Object.assign(g,{told:true,toldBy:info.by,toldHow:info.how,toldOn:info.on}); renderGuests();
+    await change("setTold",[g.id,true,info],`${g.name} marked as contacted`); return;
+  }
+  if(b.dataset.g==="untell"){g.told=false;renderGuests();await change("setTold",[g.id,false]);return}
   if(b.dataset.g==="del"){
     if(b.dataset.confirm==="0"){b.dataset.confirm="1";b.textContent="Tap again";return}
     guests=guests.filter(x=>x.id!==g.id);renderGuests();await change("removeGuest",[g.id,me()],"Removed");
@@ -435,8 +475,8 @@ $("#addGuest").addEventListener("submit",async e=>{
   e.preventDefault();
   const name=$("#gName").value.trim(); if(!name)return;
   const btn=e.target.querySelector("button"); btn.disabled=true;
-  if(await change("addGuest",[{name,relation:$("#gRel").value.trim(),email:$("#gEmail").value.trim(),facebook:$("#gFb").value.trim(),addedBy:me()}],`${name} added`)){
-    ["#gName","#gRel","#gEmail","#gFb"].forEach(s=>$(s).value="");$("#gName").focus();
+  if(await change("addGuest",[{name,relation:$("#gRel").value.trim(),mobile:$("#gMobile").value.trim(),email:$("#gEmail").value.trim(),socials:$("#gSocials").value.trim(),addedBy:me()}],`${name} added`)){
+    ["#gName","#gRel","#gMobile","#gEmail","#gSocials"].forEach(s=>$(s).value="");$("#gName").focus();
   }
   btn.disabled=false;
 });
