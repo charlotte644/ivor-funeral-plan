@@ -71,7 +71,7 @@ button:disabled{opacity:.6;cursor:default}
       <input id="caption" autocomplete="off" placeholder="e.g. Fishing trip, Tenby, 1990">
     </label>
     <label>Photos <small>You can choose more than one</small>
-      <input id="files" type="file" accept="image/*" multiple required>
+      <input id="files" type="file" accept="image/*,.jpg,.jpeg,.png,.gif,.webp,.heic,.heif,.bmp,.tif,.tiff,.avif" multiple required>
     </label>
     <div class="row"><button type="submit">Share photos</button><span id="status" role="status"></span></div>
   </form>
@@ -110,12 +110,15 @@ function show(photos){
     :`<p class="empty">No photos yet. Yours could be the first.</p>`;
 }
 /* shrink on the device first (long edge 2400px is plenty for print) so uploads are quick on mobile data */
+/* a photo this browser can't open (e.g. iPhone HEIC on Android or Windows) is sent as it is; Google Drive still shows it */
+function original(file){return new Promise((ok,bad)=>{if(file.size>18*1024*1024){bad(new Error(`${file.name} is too big. Please try a smaller photo.`));return}
+  const r=new FileReader();r.onload=()=>ok(r.result);r.onerror=()=>bad(new Error(`${file.name} couldn't be read. Please try again.`));r.readAsDataURL(file)})}
 function shrink(file){return new Promise((ok,bad)=>{
   const url=URL.createObjectURL(file),img=new Image();
   img.onload=()=>{const s=Math.min(1,2400/Math.max(img.naturalWidth,img.naturalHeight));
     const c=document.createElement("canvas");c.width=Math.round(img.naturalWidth*s);c.height=Math.round(img.naturalHeight*s);
     c.getContext("2d").drawImage(img,0,0,c.width,c.height);URL.revokeObjectURL(url);ok(c.toDataURL("image/jpeg",0.9))};
-  img.onerror=()=>{URL.revokeObjectURL(url);bad(new Error(`${file.name} couldn't be read. Try saving it as a JPEG first.`))};
+  img.onerror=()=>{URL.revokeObjectURL(url);original(file).then(ok,bad)};
   img.src=url})}
 
 $("#share").addEventListener("submit",async e=>{
@@ -127,7 +130,7 @@ $("#share").addEventListener("submit",async e=>{
   let done=0, err="";
   for(const f of files){
     st.textContent=`Uploading ${done+1} of ${files.length}…`;
-    try{show(await api("addSharedPhoto",{data:await shrink(f),caption,addedBy:who}));done++}
+    try{show(await api("addSharedPhoto",{data:await shrink(f),name:f.name,caption,addedBy:who}));done++}
     catch(x){err=x.message}
   }
   st.textContent=""; btn.disabled=false;
