@@ -1,0 +1,437 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>Ivor's Funeral Plan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,500;0,600;1,400&family=Figtree:wght@400;500;600&display=swap">
+<style>
+/* Layout: a single calm column — header with progress, three tabs (To do / Guest list / Drafts), tasks grouped by when they're due. */
+:root{
+  --bg:#f3f4f2; --surface:#ffffff; --ink:#1e2629; --muted:#5a6569; --line:#dde1df;
+  --accent:#4d5d6e; --accent-ink:#ffffff; --daffodil:#d9a520; --done:#3f7a5a; --soft:#eef0ee;
+  --display:'Spectral', Georgia, 'Times New Roman', serif;
+  --body:'Figtree', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#161b1d; --surface:#1f2629; --ink:#e8ebe9; --muted:#a3adb0; --line:#323b3e;
+  --accent:#9fb3c6; --accent-ink:#11171a; --daffodil:#e8bd4a; --done:#7cc49b; --soft:#273034; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#161b1d; --surface:#1f2629; --ink:#e8ebe9; --muted:#a3adb0; --line:#323b3e;
+  --accent:#9fb3c6; --accent-ink:#11171a; --daffodil:#e8bd4a; --done:#7cc49b; --soft:#273034; color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5}
+img{max-width:100%}
+[hidden]{display:none!important}
+.wrap{max-width:760px;margin:0 auto;padding-block:28px 64px;padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));display:flex;flex-direction:column;gap:24px}
+header{display:flex;flex-direction:column;gap:10px}
+.eyebrow{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:600}
+h1{font-family:var(--display);font-weight:500;font-size:clamp(28px,6vw,40px);line-height:1.1;margin:0;text-wrap:balance}
+.dates{font-family:var(--display);font-style:italic;color:var(--muted);font-size:17px;margin:0}
+.facts{display:flex;flex-wrap:wrap;gap:8px 18px;font-size:14px;color:var(--muted)}
+.facts b{color:var(--ink);font-weight:600}
+.progress{display:flex;align-items:center;gap:12px;margin-top:6px}
+.bar{flex:1;height:8px;border-radius:99px;background:var(--line);overflow:hidden}
+.bar span{display:block;height:100%;background:var(--daffodil);width:0;transition:width .4s ease}
+.progress small{font-variant-numeric:tabular-nums;color:var(--muted);font-size:13px;white-space:nowrap}
+.me{display:flex;flex-wrap:wrap;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.me label{font-weight:600;font-size:14px}
+input,select,textarea{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-width:0}
+input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button{font:inherit;cursor:pointer;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:7px 12px;min-height:36px}
+button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
+button.link{border:none;background:none;color:var(--accent);padding:4px 6px;text-decoration:underline;text-underline-offset:3px}
+button:disabled{opacity:.6;cursor:default}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);overflow-x:auto}
+.tabs button{border:none;border-bottom:2px solid transparent;border-radius:0;background:none;color:var(--muted);font-weight:600;padding:10px 12px;white-space:nowrap}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--daffodil)}
+.panel{display:flex;flex-direction:column;gap:16px}
+.filters{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border-radius:99px;padding:5px 12px;font-size:13px;min-height:32px}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+section.group{display:flex;flex-direction:column;gap:10px}
+section.group h2{font-family:var(--display);font-weight:500;font-size:22px;margin:8px 0 0;display:flex;align-items:baseline;gap:10px}
+section.group h2 small{font-family:var(--body);font-size:13px;color:var(--muted);font-weight:500;font-variant-numeric:tabular-nums}
+.task{background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.task.is-done{opacity:.72}
+.row{display:flex;gap:12px;align-items:flex-start;padding:12px 14px}
+.tick{flex:0 0 26px;height:26px;border-radius:50%;border:2px solid var(--muted);background:none;padding:0;min-height:0;display:flex;align-items:center;justify-content:center}
+.task.is-done .tick{background:var(--done);border-color:var(--done);color:var(--surface)}
+.tick svg{width:14px;height:14px}
+.main{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.title{font-weight:600;font-size:16px;background:none;border:none;padding:0;text-align:left;min-height:0;color:var(--ink)}
+.task.is-done .title{text-decoration:line-through;text-decoration-color:var(--muted)}
+.meta{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;font-size:13px;color:var(--muted)}
+.who{display:inline-flex;align-items:center;gap:6px;background:var(--soft);border-radius:99px;padding:2px 10px;color:var(--ink);font-weight:500}
+.who.none{background:none;border:1px dashed var(--line);color:var(--muted)}
+.steps-count{font-variant-numeric:tabular-nums}
+.detail{border-top:1px solid var(--line);padding:12px 14px 14px 52px;display:flex;flex-direction:column;gap:12px;background:var(--soft)}
+.detail ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.detail li label{display:flex;gap:10px;align-items:flex-start;cursor:pointer}
+.detail li input{margin-top:4px;accent-color:var(--done);width:16px;height:16px;padding:0}
+.detail li.checked span{color:var(--muted);text-decoration:line-through}
+.assign{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.assign input{flex:1 1 160px}
+.notes{display:flex;flex-direction:column;gap:6px}
+.notes textarea{min-height:64px;resize:vertical}
+.notes label,.assign label{font-size:13px;font-weight:600;color:var(--muted)}
+.add{background:var(--surface);border:1px dashed var(--line);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.add .fields{display:flex;flex-wrap:wrap;gap:8px}
+.add .fields input{flex:1 1 200px}
+.guests-head{display:flex;flex-direction:column;gap:6px}
+.guests-head h2{font-family:var(--display);font-weight:500;font-size:24px;margin:0}
+.guests-head p{margin:0;color:var(--muted)}
+.gtable{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:10px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+tr:last-child td{border-bottom:none}
+td.status button{font-size:13px;padding:4px 10px;min-height:30px;border-radius:99px}
+td.status button[aria-pressed="true"]{background:var(--done);color:var(--surface);border-color:var(--done)}
+.empty{color:var(--muted);text-align:center;padding:24px 12px}
+.notice{background:var(--surface);border:1px solid var(--line);border-left-width:4px;border-left-color:var(--daffodil);border-radius:8px;padding:10px 14px;font-size:14px}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom, 0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 16px;border-radius:99px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none;max-width:calc(100% - 32px);text-align:center}
+.toast.show{opacity:1}
+.count{font-variant-numeric:tabular-nums}
+.dgroup{font-family:var(--display);font-weight:500;font-size:20px;margin:6px 0 0}
+.dgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px}
+.draft{margin:0;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.draft img{display:block;width:100%;height:auto;border:1px solid var(--line);background:#fbfaf7}
+.draft figcaption{font-weight:600;font-size:14px}
+.fb{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.fb li{background:var(--soft);border-radius:8px;padding:6px 8px;font-size:13px;display:flex;flex-direction:column;gap:2px}
+.fb small{color:var(--muted)}
+.fbform{display:flex;gap:6px}
+.fbform input{flex:1;min-width:0;font-size:13px;padding:6px 8px}
+.fbform button{font-size:13px;padding:4px 10px;min-height:32px}
+.vh{position:absolute;left:-9999px}
+@media (max-width:520px){.detail{padding-left:14px}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <span class="eyebrow">Family planning page</span>
+    <h1>Ivor Roy William Warren</h1>
+    <p class="dates">7th November 1948 – 24th October 2026</p>
+    <div class="facts">
+      <span><b>Cremation</b> at Memoria Cardiff &amp; Vale of Glamorgan</span>
+      <span><b>Date:</b> to be confirmed</span>
+      <span><b>Donations:</b> Marie Curie</span>
+    </div>
+    <div class="progress" aria-label="Overall progress">
+      <div class="bar"><span id="bar"></span></div>
+      <small id="progressText">Loading tasks…</small>
+    </div>
+  </header>
+
+  <div class="me">
+    <label for="myName">Your name</label>
+    <input id="myName" placeholder="e.g. Charlotte" autocomplete="given-name">
+    <span style="font-size:13px;color:var(--muted)">So you can take tasks and see your own.</span>
+  </div>
+
+  <div id="offline" class="notice" hidden>The list couldn't connect just now. Check your signal and reopen the page. Anything you add won't be saved until it connects.</div>
+
+  <nav class="tabs" role="tablist">
+    <button id="tabTasks" role="tab" aria-selected="true" aria-controls="panelTasks">To do</button>
+    <button id="tabGuests" role="tab" aria-selected="false" aria-controls="panelGuests">Guest list <span class="count" id="guestCount"></span></button>
+    <button id="tabDrafts" role="tab" aria-selected="false" aria-controls="panelDrafts">Drafts to review</button>
+  </nav>
+
+  <div id="panelTasks" class="panel" role="tabpanel">
+    <div class="filters" role="group" aria-label="Show">
+      <button class="chip" data-f="all" aria-pressed="true">All</button>
+      <button class="chip" data-f="mine" aria-pressed="false">Mine</button>
+      <button class="chip" data-f="open" aria-pressed="false">Needs someone</button>
+      <button class="chip" data-f="todo" aria-pressed="false">Not done</button>
+      <button class="chip" data-f="done" aria-pressed="false">Done</button>
+    </div>
+    <div id="groups" style="display:flex;flex-direction:column;gap:18px">
+      <p class="empty">Loading the family's to-do list…</p>
+    </div>
+    <form class="add" id="addTask">
+      <strong>Add a task</strong>
+      <div class="fields">
+        <input id="newTitle" placeholder="What needs doing?" required>
+        <select id="newSection" aria-label="When">
+          <option>Monday</option><option selected>This week</option><option>Before the funeral</option><option>On the day</option><option>Afterwards</option>
+        </select>
+      </div>
+      <div><button class="primary" type="submit">Add task</button></div>
+    </form>
+  </div>
+
+  <div id="panelGuests" class="panel" role="tabpanel" hidden>
+    <div class="guests-head">
+      <h2>Who to invite</h2>
+      <p>Add anyone who should hear about the funeral, with their email address so the invitation can be emailed, or their Facebook name if there's no email. Tick them off once they've been sent it.</p>
+    </div>
+    <form class="add" id="addGuest">
+      <div class="fields">
+        <input id="gName" placeholder="Name" required>
+        <input id="gRel" placeholder="How they knew Ivor (e.g. old workmate)">
+        <input id="gEmail" type="email" placeholder="Email address" autocomplete="off">
+        <input id="gFb" placeholder="Facebook name (if no email)">
+      </div>
+      <div><button class="primary" type="submit">Add to guest list</button></div>
+    </form>
+    <div class="gtable">
+      <table>
+        <thead><tr><th>Name</th><th>Connection</th><th>Email</th><th>Facebook</th><th>Added by</th><th>Told?</th><th><span class="vh">Remove</span></th></tr></thead>
+        <tbody id="guestRows"><tr><td colspan="7" class="empty">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="panelDrafts" class="panel" role="tabpanel" hidden>
+    <div class="guests-head">
+      <h2>Drafts for review</h2>
+      <p>Words in [brackets] are still to be filled in. Tap a draft to see it full size, and leave any changes or comments underneath it.</p>
+    </div>
+    <div id="draftList"></div>
+  </div>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="config.js?v=1"></script>
+<script>
+const SECTIONS=["Monday","This week","Before the funeral","On the day","Afterwards"];
+const REFRESH_MS=20000;
+let tasks=[], guests=[], feedback=[], loaded=false, filter="all", open=new Set();
+const $=s=>document.querySelector(s);
+const store={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+const myNameEl=$("#myName"); myNameEl.value=store.get("myName")||"";
+myNameEl.addEventListener("input",()=>{store.set("myName",myNameEl.value.trim());render()});
+const me=()=>myNameEl.value.trim();
+function toast(t){const el=$("#toast");el.textContent=t;el.classList.add("show");clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.remove("show"),2200)}
+function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+const tickSvg='<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8.5l3.2 3L13 4.5"/></svg>';
+
+/* ---- talking to the Google Sheet (via the Apps Script web app) ---- */
+async function api(fn,...args){
+  const url=(window.PLAN_CONFIG||{}).SCRIPT_URL;
+  if(!url)throw new Error("This page isn't connected yet.");
+  let res;
+  try{res=await fetch(url,{method:"POST",credentials:"omit",redirect:"follow",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({fn,args})})}
+  catch(e){$("#offline").hidden=false;throw new Error("Couldn't connect. Check your signal and try again.")}
+  let j; try{j=JSON.parse(await res.text())}catch(e){throw new Error("The list is busy. Try again in a minute.")}
+  $("#offline").hidden=true;
+  if(!j.ok)throw new Error(j.error||"That didn't save. Try again.");
+  return j.data;
+}
+function apply(d){tasks=d.tasks||[];guests=d.guests||[];feedback=d.feedback||[];loaded=true;renderAll()}
+/* every change returns the whole list, so the page always shows what's really saved */
+async function change(fn,args,okMsg){
+  try{apply(await api(fn,...args));if(okMsg)toast(okMsg);return true}
+  catch(e){toast(e.message);refresh();return false}
+}
+let busy=false;
+async function refresh(){
+  if(busy)return; busy=true;
+  try{apply(await api("getAll"))}catch(e){if(!loaded){$("#progressText").textContent="Not connected";$("#offline").hidden=false}}
+  finally{busy=false}
+}
+/* don't redraw under someone's fingers: skip a scheduled refresh while they're typing in a task */
+function typing(){const a=document.activeElement;return a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)&&a.closest("#groups,#draftList,#guestRows")}
+setInterval(()=>{if(!document.hidden&&!typing())refresh()},REFRESH_MS);
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)refresh()});
+
+/* ---- tabs ---- */
+function show(tab){
+  for(const [n,t,p] of [["tasks","#tabTasks","#panelTasks"],["guests","#tabGuests","#panelGuests"],["drafts","#tabDrafts","#panelDrafts"]]){
+    const on=n===tab; $(t).setAttribute("aria-selected",on); $(p).hidden=!on;
+  }
+  try{history.replaceState(null,"",tab==="tasks"?location.pathname:"#"+tab)}catch(e){}
+}
+$("#tabTasks").onclick=()=>show("tasks");$("#tabGuests").onclick=()=>show("guests");$("#tabDrafts").onclick=()=>show("drafts");
+if(location.hash==="#guests")show("guests");
+if(location.hash==="#drafts")show("drafts");
+
+/* ---- drafts ---- */
+const DRAFTS=[
+ ["Order of service","p1","Page 1 · Front cover","drafts/Ivor-1-front-cover.jpg"],
+ ["Order of service","p2","Page 2 · Order of service","drafts/Ivor-2-order-of-service.jpg"],
+ ["Order of service","p3","Page 3 · Hymn","drafts/Ivor-3-hymn.jpg"],
+ ["Order of service","p4","Page 4 · Reading","drafts/Ivor-4-reading.jpg"],
+ ["Order of service","p5","Page 5 · Remembering Ivor","drafts/Ivor-5-about-ivor.jpg"],
+ ["Order of service","p6","Page 6 · Photos","drafts/Ivor-6-photos.jpg"],
+ ["Order of service","p7","Page 7 · Thank you","drafts/Ivor-7-thank-you.jpg"],
+ ["Order of service","p8","Page 8 · Back cover","drafts/Ivor-8-back-cover.jpg"],
+ ["Invitations and cards","inv","Funeral invitation","drafts/Ivor-funeral-invitation.jpg"],
+ ["Invitations and cards","wakeinv","Wake invitation","drafts/Ivor-wake-invitation.jpg"],
+ ["Invitations and cards","board","Wake welcome board","drafts/Ivor-wake-welcome-board.jpg"],
+ ["Invitations and cards","tyf","Thank-you card · front","drafts/Ivor-thank-you-card-front.jpg"],
+ ["Invitations and cards","tyi","Thank-you card · inside","drafts/Ivor-thank-you-card-inside.jpg"],
+];
+function renderDrafts(){
+  /* keep anything half-typed in the comment boxes */
+  const kept={};document.querySelectorAll(".fbform input").forEach(i=>{if(i.value)kept[i.id]=i.value});
+  const focused=document.activeElement&&document.activeElement.closest(".fbform")?document.activeElement.id:null;
+  let html="",group="";
+  for(const [g,id,label,src] of DRAFTS){
+    if(g!==group){ if(group)html+="</div>"; group=g; html+=`<h3 class="dgroup">${esc(g)}</h3><div class="dgrid">`; }
+    const fb=feedback.filter(f=>f.draft===id);
+    html+=`<figure class="draft"><a href="${src}" target="_blank" rel="noopener"><img src="${src}" alt="${esc(label)} draft" loading="lazy"></a>
+      <figcaption>${esc(label)}</figcaption>
+      ${fb.length?`<ul class="fb">${fb.map(f=>`<li><span>${esc(f.text)}</span><small>${esc(f.name||"Someone")}</small></li>`).join("")}</ul>`:""}
+      <form class="fbform" data-draft="${id}"><label for="fb-${id}" class="vh">Comment on ${esc(label)}</label><input id="fb-${id}" placeholder="Suggest a change…"><button type="submit">Add</button></form>
+    </figure>`;
+  }
+  $("#draftList").innerHTML=html+"</div>";
+  for(const k in kept){const i=document.getElementById(k);if(i)i.value=kept[k]}
+  if(focused){const i=document.getElementById(focused);if(i)i.focus()}
+}
+$("#draftList").addEventListener("submit",async e=>{
+  e.preventDefault(); const f=e.target.closest(".fbform"); if(!f)return;
+  const inp=f.querySelector("input"); const text=inp.value.trim(); if(!text)return;
+  const btn=f.querySelector("button"); btn.disabled=true;
+  inp.value=""; inp.blur();
+  if(!await change("addComment",[{draft:f.dataset.draft,text,name:me()}],"Comment added")){const i=document.getElementById(inp.id);if(i)i.value=text}
+  btn.disabled=false;
+});
+
+/* ---- tasks ---- */
+document.querySelectorAll(".chip").forEach(b=>b.onclick=()=>{
+  if(b.dataset.f==="mine"&&!me()){myNameEl.focus();toast("Add your name first");return}
+  filter=b.dataset.f;document.querySelectorAll(".chip").forEach(c=>c.setAttribute("aria-pressed",c===b));render()});
+
+function visible(t){
+  if(filter==="mine")return (t.assignee||"").toLowerCase()===me().toLowerCase();
+  if(filter==="open")return !t.assignee&&!t.done;
+  if(filter==="todo")return !t.done;
+  if(filter==="done")return !!t.done;
+  return true;
+}
+
+function render(){
+  const total=tasks.length, done=tasks.filter(t=>t.done).length;
+  $("#bar").style.width=total?(done/total*100)+"%":"0";
+  $("#progressText").textContent=total?`${done} of ${total} done`:(loaded?"No tasks yet":"Loading tasks…");
+  const g=$("#groups");
+  if(!total){g.innerHTML=`<p class="empty">${loaded?"No tasks yet. Add the first one below.":"Loading the family's to-do list…"}</p>`;return}
+  /* keep unsaved notes and names someone is part-way through */
+  const kept={};g.querySelectorAll("textarea,.assign input").forEach(i=>{const t=tasks.find(x=>x.id===i.dataset.id);const saved=i.tagName==="TEXTAREA"?(t&&t.notes||""):(t&&t.assignee||"");if(i.value!==saved)kept[i.id]=i.value});
+  const focused=document.activeElement&&g.contains(document.activeElement)?document.activeElement.id:null;
+  let html="";
+  for(const s of SECTIONS){
+    const all=tasks.filter(t=>t.section===s).sort((a,b)=>(a.order??999)-(b.order??999));
+    const list=all.filter(visible); if(!list.length)continue;
+    html+=`<section class="group"><h2>${esc(s)} <small>${all.filter(t=>t.done).length}/${all.length}</small></h2>`;
+    for(const t of list){
+      const steps=Array.isArray(t.steps)?t.steps:[]; const sd=steps.filter(x=>x.done).length; const isOpen=open.has(t.id);
+      html+=`<article class="task${t.done?" is-done":""}">
+        <div class="row">
+          <button class="tick" data-act="done" data-id="${t.id}" aria-label="${t.done?"Mark not done":"Mark done"}: ${esc(t.title)}">${t.done?tickSvg:""}</button>
+          <div class="main">
+            <button class="title" data-act="toggle" data-id="${t.id}" aria-expanded="${isOpen}">${esc(t.title)}</button>
+            <div class="meta">
+              ${t.assignee?`<span class="who">${esc(t.assignee)}</span>`:`<span class="who none">Needs someone</span>`}
+              ${steps.length?`<span class="steps-count">${sd}/${steps.length} steps</span>`:""}
+              ${t.when?`<span>${esc(t.when)}</span>`:""}
+              ${t.notes&&!isOpen?`<span>· has notes</span>`:""}
+              <button class="link" data-act="toggle" data-id="${t.id}">${isOpen?"Hide details":"Details"}</button>
+            </div>
+          </div>
+        </div>
+        ${isOpen?`<div class="detail">
+          ${steps.length?`<ul>${steps.map((x,i)=>`<li class="${x.done?"checked":""}"><label><input type="checkbox" id="s-${t.id}-${i}" data-act="step" data-id="${t.id}" data-i="${i}" ${x.done?"checked":""}><span>${esc(x.text)}</span></label></li>`).join("")}</ul>`:""}
+          <div class="assign">
+            <label for="a-${t.id}">Who's doing this</label>
+            <input id="a-${t.id}" data-id="${t.id}" value="${esc(t.assignee||"")}" placeholder="Name">
+            <button data-act="assign" data-id="${t.id}">Save</button>
+            ${me()&&t.assignee!==me()?`<button class="primary" data-act="take" data-id="${t.id}">I'll do it</button>`:""}
+          </div>
+          <div class="notes">
+            <label for="n-${t.id}">Notes</label>
+            <textarea id="n-${t.id}" data-act="notes" data-id="${t.id}" placeholder="Add an update for the family">${esc(t.notes||"")}</textarea>
+            <div><button data-act="savenotes" data-id="${t.id}">Save note</button></div>
+          </div>
+          <div><button class="link" data-act="del" data-id="${t.id}" data-confirm="0">Remove this task</button></div>
+        </div>`:""}
+      </article>`;
+    }
+    html+=`</section>`;
+  }
+  g.innerHTML=html||`<p class="empty">Nothing matches this filter.</p>`;
+  for(const k in kept){const i=document.getElementById(k);if(i)i.value=kept[k]}
+  if(focused){const i=document.getElementById(focused);if(i)i.focus()}
+}
+
+function patchLocal(id,p){const t=tasks.find(x=>x.id===id);if(t)Object.assign(t,p);render()}
+async function saveNotes(id){
+  const el=$("#n-"+id),t=tasks.find(x=>x.id===id); if(!el||!t||(t.notes||"")===el.value)return;
+  await change("updateTask",[id,{notes:el.value}],"Note saved");
+}
+$("#groups").addEventListener("click",async e=>{
+  const b=e.target.closest("button[data-act]"); if(!b)return; const id=b.dataset.id; const t=tasks.find(x=>x.id===id); if(!t)return;
+  const a=b.dataset.act;
+  if(a==="toggle"){open.has(id)?open.delete(id):open.add(id);render()}
+  if(a==="done"){const v=!t.done;patchLocal(id,{done:v});await change("updateTask",[id,{done:v}],v?"Done":"Marked not done")}
+  if(a==="assign"){const v=$("#a-"+id).value.trim();patchLocal(id,{assignee:v});await change("updateTask",[id,{assignee:v}],v?`Assigned to ${v}`:"Unassigned")}
+  if(a==="take"){patchLocal(id,{assignee:me()});await change("updateTask",[id,{assignee:me()}],"It's yours")}
+  if(a==="savenotes")await saveNotes(id);
+  if(a==="del"){
+    if(b.dataset.confirm==="0"){b.dataset.confirm="1";b.textContent="Tap again to remove";return}
+    tasks=tasks.filter(x=>x.id!==id);render();await change("removeTask",[id,me()],"Removed");
+  }
+});
+$("#groups").addEventListener("change",async e=>{
+  const el=e.target; if(el.dataset.act!=="step")return; const t=tasks.find(x=>x.id===el.dataset.id); if(!t)return;
+  const i=+el.dataset.i; t.steps=t.steps.map((x,j)=>j===i?{...x,done:el.checked}:x); render();
+  await change("setStep",[t.id,i,el.checked]);
+});
+$("#groups").addEventListener("focusout",e=>{
+  const el=e.target; if(el.dataset.act!=="notes")return;
+  /* a tap on "Save note" handles it; otherwise save when they leave the box */
+  setTimeout(()=>{const a=document.activeElement;if(!(a&&a.dataset&&a.dataset.act==="savenotes"&&a.dataset.id===el.dataset.id))saveNotes(el.dataset.id)},0);
+});
+
+$("#addTask").addEventListener("submit",async e=>{
+  e.preventDefault();
+  const title=$("#newTitle").value.trim(); if(!title)return;
+  const btn=e.target.querySelector("button"); btn.disabled=true;
+  if(await change("addTask",[{title,section:$("#newSection").value,addedBy:me()}],"Task added"))$("#newTitle").value="";
+  btn.disabled=false;
+});
+
+/* ---- guests ---- */
+function renderGuests(){
+  const told=guests.filter(g=>g.told).length;
+  $("#guestCount").textContent=guests.length?`(${guests.length})`:"";
+  const tb=$("#guestRows");
+  if(!guests.length){tb.innerHTML=`<tr><td colspan="7" class="empty">${loaded?"No names yet. Add the first person above.":"Loading…"}</td></tr>`;return}
+  tb.innerHTML=guests.map(g=>`<tr>
+    <td><strong>${esc(g.name)}</strong></td><td>${esc(g.relation)}</td><td style="word-break:break-all">${esc(g.email)}</td><td>${esc(g.facebook)}</td><td>${esc(g.addedBy)}</td>
+    <td class="status"><button data-g="told" data-id="${g.id}" aria-pressed="${!!g.told}">${g.told?"Told":"Not yet"}</button></td>
+    <td><button class="link" data-g="del" data-id="${g.id}" data-confirm="0">Remove</button></td></tr>`).join("")+
+    `<tr><td colspan="7" style="color:var(--muted);font-size:13px">${guests.length} people · ${told} told</td></tr>`;
+}
+$("#guestRows").addEventListener("click",async e=>{
+  const b=e.target.closest("[data-g]"); if(!b)return; const g=guests.find(x=>x.id===b.dataset.id); if(!g)return;
+  if(b.dataset.g==="told"){g.told=!g.told;renderGuests();await change("setTold",[g.id,g.told])}
+  if(b.dataset.g==="del"){
+    if(b.dataset.confirm==="0"){b.dataset.confirm="1";b.textContent="Tap again";return}
+    guests=guests.filter(x=>x.id!==g.id);renderGuests();await change("removeGuest",[g.id,me()],"Removed");
+  }
+});
+$("#addGuest").addEventListener("submit",async e=>{
+  e.preventDefault();
+  const name=$("#gName").value.trim(); if(!name)return;
+  const btn=e.target.querySelector("button"); btn.disabled=true;
+  if(await change("addGuest",[{name,relation:$("#gRel").value.trim(),email:$("#gEmail").value.trim(),facebook:$("#gFb").value.trim(),addedBy:me()}],`${name} added`)){
+    ["#gName","#gRel","#gEmail","#gFb"].forEach(s=>$(s).value="");$("#gName").focus();
+  }
+  btn.disabled=false;
+});
+
+function renderAll(){render();renderGuests();renderDrafts()}
+renderAll();
+refresh();
+</script>
+</body>
+</html>
