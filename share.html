@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>Share a Photo of Ivor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,500;0,600;1,400&family=Figtree:wght@400;500;600&display=swap">
+<style>
+/* Layout: one calm column — who it's for, a short upload form, then every photo shared so far. */
+:root{
+  --bg:#f3f4f2; --surface:#ffffff; --ink:#1e2629; --muted:#5a6569; --line:#dde1df;
+  --accent:#4d5d6e; --accent-ink:#ffffff; --daffodil:#d9a520; --done:#3f7a5a; --soft:#eef0ee;
+  --display:'Spectral', Georgia, 'Times New Roman', serif;
+  --body:'Figtree', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#161b1d; --surface:#1f2629; --ink:#e8ebe9; --muted:#a3adb0; --line:#323b3e;
+  --accent:#9fb3c6; --accent-ink:#11171a; --daffodil:#e8bd4a; --done:#7cc49b; --soft:#273034; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#161b1d; --surface:#1f2629; --ink:#e8ebe9; --muted:#a3adb0; --line:#323b3e;
+  --accent:#9fb3c6; --accent-ink:#11171a; --daffodil:#e8bd4a; --done:#7cc49b; --soft:#273034; color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.55}
+[hidden]{display:none!important}
+.wrap{max-width:720px;margin:0 auto;padding-block:32px 64px;padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));display:flex;flex-direction:column;gap:26px}
+header{display:flex;flex-direction:column;gap:10px}
+.eyebrow{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:600}
+h1{font-family:var(--display);font-weight:500;font-size:clamp(28px,6vw,40px);line-height:1.1;margin:0;text-wrap:balance}
+.dates{font-family:var(--display);font-style:italic;color:var(--muted);font-size:17px;margin:0}
+header p.lead{margin:4px 0 0;max-width:60ch}
+h2{font-family:var(--display);font-weight:500;font-size:24px;margin:0}
+form{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:14px}
+label{display:flex;flex-direction:column;gap:6px;font-weight:600;font-size:14px}
+label small{font-weight:400;color:var(--muted)}
+input{font:inherit;font-weight:400;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 12px;min-width:0}
+input[type=file]{padding:8px}
+input:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button{font:inherit;font-weight:600;cursor:pointer;border-radius:8px;border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);padding:10px 18px;min-height:44px}
+button:disabled{opacity:.6;cursor:default}
+.row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+#status{font-size:14px;color:var(--muted)}
+.thanks{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--done);border-radius:8px;padding:12px 14px}
+.notice{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--daffodil);border-radius:8px;padding:12px 14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px}
+.grid figure{margin:0;background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:hidden;display:flex;flex-direction:column}
+.grid a{display:block;background:var(--soft)}
+.grid img{display:block;width:100%;height:170px;object-fit:cover}
+.grid figcaption{padding:8px 10px;font-size:13px;display:flex;flex-direction:column;gap:2px}
+.grid figcaption small{color:var(--muted)}
+.empty{color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <span class="eyebrow">In loving memory</span>
+    <h1>Ivor Roy William Warren</h1>
+    <p class="dates">7th November 1948 – 24th October 2026</p>
+    <p class="lead">If you have a photo of Ivor, the family would love to see it. Some may be used in the order of service, at the wake or on the thank-you cards. Thank you for sharing your memories of him.</p>
+  </header>
+
+  <form id="share">
+    <h2>Share your photos</h2>
+    <label>Your name
+      <input id="who" required autocomplete="name" placeholder="e.g. Jean Smith">
+    </label>
+    <label>About the photo <small>Optional: where and when it was taken, or who's with him</small>
+      <input id="caption" autocomplete="off" placeholder="e.g. Fishing trip, Tenby, 1990">
+    </label>
+    <label>Photos <small>You can choose more than one</small>
+      <input id="files" type="file" accept="image/*" multiple required>
+    </label>
+    <div class="row"><button type="submit">Share photos</button><span id="status" role="status"></span></div>
+  </form>
+  <div id="thanks" class="thanks" hidden role="status"></div>
+  <div id="offline" class="notice" hidden>This page couldn't connect just now. Check your signal and try again.</div>
+
+  <section style="display:flex;flex-direction:column;gap:12px">
+    <h2>Photos shared so far <span id="count" style="font-family:var(--body);font-size:15px;color:var(--muted)"></span></h2>
+    <div id="grid" class="grid"><p class="empty">Loading…</p></div>
+  </section>
+</div>
+
+<script src="config.js?v=2"></script>
+<script>
+const $=s=>document.querySelector(s);
+const store={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+$("#who").value=store.get("shareName")||"";
+
+async function api(fn,...args){
+  const url=(window.PLAN_CONFIG||{}).SCRIPT_URL;
+  let res;
+  try{res=await fetch(url,{method:"POST",credentials:"omit",redirect:"follow",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({fn,args})})}
+  catch(e){$("#offline").hidden=false;throw new Error("Couldn't connect. Check your signal and try again.")}
+  let j; try{j=JSON.parse(await res.text())}catch(e){throw new Error("The page is busy. Please try again in a minute.")}
+  $("#offline").hidden=true;
+  if(!j.ok)throw new Error(j.error||"That didn't work. Please try again.");
+  return j.data;
+}
+const thumb=(id,w)=>`https://drive.google.com/thumbnail?id=${encodeURIComponent(id)}&sz=w${w}`;
+function show(photos){
+  $("#count").textContent=photos.length?`(${photos.length})`:"";
+  $("#grid").innerHTML=photos.length?photos.slice().reverse().map(p=>`<figure>
+    <a href="https://drive.google.com/file/d/${encodeURIComponent(p.fileId)}/view" target="_blank" rel="noopener"><img src="${thumb(p.fileId,500)}" alt="${esc(p.caption||"Photo of Ivor")}" loading="lazy"></a>
+    <figcaption>${p.caption?`<span>${esc(p.caption)}</span>`:""}${p.addedBy?`<small>Shared by ${esc(p.addedBy)}</small>`:""}</figcaption></figure>`).join("")
+    :`<p class="empty">No photos yet. Yours could be the first.</p>`;
+}
+/* shrink on the device first (long edge 2400px is plenty for print) so uploads are quick on mobile data */
+function shrink(file){return new Promise((ok,bad)=>{
+  const url=URL.createObjectURL(file),img=new Image();
+  img.onload=()=>{const s=Math.min(1,2400/Math.max(img.naturalWidth,img.naturalHeight));
+    const c=document.createElement("canvas");c.width=Math.round(img.naturalWidth*s);c.height=Math.round(img.naturalHeight*s);
+    c.getContext("2d").drawImage(img,0,0,c.width,c.height);URL.revokeObjectURL(url);ok(c.toDataURL("image/jpeg",0.9))};
+  img.onerror=()=>{URL.revokeObjectURL(url);bad(new Error(`${file.name} couldn't be read. Try saving it as a JPEG first.`))};
+  img.src=url})}
+
+$("#share").addEventListener("submit",async e=>{
+  e.preventDefault();
+  const who=$("#who").value.trim(), caption=$("#caption").value.trim(), files=[...$("#files").files];
+  if(!who||!files.length)return;
+  store.set("shareName",who);
+  const btn=e.target.querySelector("button"), st=$("#status"); btn.disabled=true; $("#thanks").hidden=true;
+  let done=0, err="";
+  for(const f of files){
+    st.textContent=`Uploading ${done+1} of ${files.length}…`;
+    try{show(await api("addSharedPhoto",{data:await shrink(f),caption,addedBy:who}));done++}
+    catch(x){err=x.message}
+  }
+  st.textContent=""; btn.disabled=false;
+  if(done){$("#files").value="";$("#caption").value="";
+    $("#thanks").textContent=`Thank you, ${who}. ${done===1?"Your photo has":`Your ${done} photos have`} been shared with the family.${err?" "+err:""}`;$("#thanks").hidden=false}
+  else if(err){$("#thanks").textContent=err;$("#thanks").hidden=false}
+});
+
+api("getPhotos").then(show).catch(()=>{$("#grid").innerHTML=`<p class="empty">Photos couldn't be loaded just now.</p>`});
+</script>
+</body>
+</html>
