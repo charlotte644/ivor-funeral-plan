@@ -118,6 +118,33 @@ tr.tellrow td{background:var(--soft)}
 .fbform input{flex:1;min-width:0;font-size:13px;padding:6px 8px}
 .fbform button{font-size:13px;padding:4px 10px;min-height:32px}
 .vh{position:absolute;left:-9999px}
+.upl{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.upl span{font-size:13px;color:var(--muted)}
+.picks{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.picks h3{margin:0;font-size:14px;font-weight:600}
+.picks ul{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:6px 14px}
+.picks li{display:flex;align-items:center;gap:8px;font-size:13px;min-height:40px}
+.picks li img{width:36px;height:36px;object-fit:cover;border-radius:4px;border:1px solid var(--line)}
+.picks li .none{color:var(--muted);font-style:italic}
+.pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
+.photo{margin:0;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.photo .pic{display:block;background:var(--soft);border-radius:6px;overflow:hidden}
+.photo .pic img{display:block;width:100%;height:220px;object-fit:contain}
+.photo figcaption{font-size:14px;display:flex;flex-direction:column;gap:2px}
+.photo figcaption small{color:var(--muted);font-size:12px}
+.approved{display:flex;flex-wrap:wrap;gap:4px}
+.approved span{background:var(--done);color:var(--surface);border-radius:99px;padding:2px 9px;font-size:12px;font-weight:600}
+.sugg{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px}
+.sugg li{background:var(--soft);border-radius:8px;padding:5px 8px;font-size:13px}
+.sugg li b{font-weight:600}
+.sform{display:flex;flex-wrap:wrap;gap:6px}
+.sform select,.sform input{flex:1 1 140px;font-size:13px;padding:6px 8px}
+.sform button{font-size:13px;padding:4px 10px;min-height:32px}
+.approve{display:flex;flex-direction:column;gap:6px;border-top:1px solid var(--line);padding-top:8px}
+.approve .lbl{font-size:12px;font-weight:600;color:var(--muted)}
+.approve .chips{display:flex;flex-wrap:wrap;gap:4px}
+.approve .chip{font-size:12px;min-height:30px;padding:3px 10px}
+.approve .chip[aria-pressed="true"]{background:var(--done);border-color:var(--done);color:var(--surface)}
 @media (max-width:520px){.detail{padding-left:14px}th,td{padding:8px}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -201,6 +228,22 @@ tr.tellrow td{background:var(--soft)}
 
   <div id="panelDrafts" class="panel" role="tabpanel" hidden>
     <div class="guests-head">
+      <h2>Photos of Ivor</h2>
+      <p>Add your favourite photos of Ivor, then suggest where each one should go. Mum has the final say: when her name is in "Your name" at the top, she can approve a photo for each place.</p>
+    </div>
+    <div id="picks" class="picks"></div>
+    <form class="add" id="addPhoto">
+      <strong>Add photos</strong>
+      <div class="fields">
+        <label class="vh" for="pFiles">Choose photos</label>
+        <input id="pFiles" type="file" accept="image/*" multiple required>
+        <input id="pCaption" placeholder="Caption (optional), e.g. On his boat, 1985" autocomplete="off">
+      </div>
+      <div class="upl"><button class="primary" type="submit">Upload</button><span id="pStatus" role="status"></span></div>
+    </form>
+    <div id="photoList" class="pgrid"></div>
+
+    <div class="guests-head" style="margin-top:12px">
       <h2>Drafts for review</h2>
       <p>Words in [brackets] are still to be filled in. Tap a draft to see it full size, and leave any changes or comments underneath it.</p>
     </div>
@@ -216,10 +259,11 @@ const SECTIONS=["Monday","This week","Before the funeral","On the day","Afterwar
 const FAMILY=["Mum","Charl","Tom","Ben"];
 const REFRESH_MS=20000;
 let tasks=[], guests=[], feedback=[], loaded=false, filter="all", open=new Set();
+let photos=[], suggestions=[], PLACES=[], APPROVER="Mum";
 const $=s=>document.querySelector(s);
 const store={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
 const myNameEl=$("#myName"); myNameEl.value=store.get("myName")||"";
-myNameEl.addEventListener("input",()=>{store.set("myName",myNameEl.value.trim());render()});
+myNameEl.addEventListener("input",()=>{store.set("myName",myNameEl.value.trim());render();renderPhotos()});
 const me=()=>myNameEl.value.trim();
 function toast(t){const el=$("#toast");el.textContent=t;el.classList.add("show");clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.remove("show"),2200)}
 function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
@@ -237,7 +281,7 @@ async function api(fn,...args){
   if(!j.ok)throw new Error(j.error||"That didn't save. Try again.");
   return j.data;
 }
-function apply(d){tasks=d.tasks||[];guests=d.guests||[];feedback=d.feedback||[];loaded=true;renderAll()}
+function apply(d){tasks=d.tasks||[];guests=d.guests||[];feedback=d.feedback||[];photos=d.photos||[];suggestions=d.suggestions||[];if(d.places)PLACES=d.places;if(d.approver)APPROVER=d.approver;loaded=true;renderAll()}
 /* every change returns the whole list, so the page always shows what's really saved */
 async function change(fn,args,okMsg){
   try{apply(await api(fn,...args));if(okMsg)toast(okMsg);return true}
@@ -250,7 +294,7 @@ async function refresh(){
   finally{busy=false}
 }
 /* don't redraw under someone's fingers: skip a scheduled refresh while they're typing in a task */
-function typing(){const a=document.activeElement;return a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)&&a.closest("#groups,#draftList,#guestRows")}
+function typing(){const a=document.activeElement;return a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)&&a.closest("#groups,#draftList,#guestRows,#photoList")}
 setInterval(()=>{if(!document.hidden&&!typing())refresh()},REFRESH_MS);
 document.addEventListener("visibilitychange",()=>{if(!document.hidden)refresh()});
 
@@ -273,11 +317,11 @@ const DRAFTS=[
  ["Order of service","p4","Page 4 · Reading","drafts/Ivor-4-reading.jpg?v=2"],
  ["Order of service","p5","Page 5 · Remembering Ivor","drafts/Ivor-5-about-ivor.jpg"],
  ["Order of service","p6","Page 6 · Photos","drafts/Ivor-6-photos.jpg"],
- ["Order of service","p7","Page 7 · Thank you","drafts/Ivor-7-thank-you.jpg"],
+ ["Order of service","p7","Page 7 · Thank you","drafts/Ivor-7-thank-you.jpg?v=2"],
  ["Order of service","p8","Page 8 · Back cover","drafts/Ivor-8-back-cover.jpg"],
- ["Invitations and cards","inv","Funeral invitation","drafts/Ivor-funeral-invitation.jpg"],
+ ["Invitations and cards","inv","Funeral invitation","drafts/Ivor-funeral-invitation.jpg?v=2"],
  ["Invitations and cards","wakeinv","Wake invitation","drafts/Ivor-wake-invitation.jpg"],
- ["Invitations and cards","board","Wake welcome board","drafts/Ivor-wake-welcome-board.jpg"],
+ ["Invitations and cards","board","Wake welcome board","drafts/Ivor-wake-welcome-board.jpg?v=2"],
  ["Invitations and cards","tyf","Thank-you card · front","drafts/Ivor-thank-you-card-front.jpg"],
  ["Invitations and cards","tyi","Thank-you card · inside","drafts/Ivor-thank-you-card-inside.jpg"],
 ];
@@ -481,7 +525,78 @@ $("#addGuest").addEventListener("submit",async e=>{
   btn.disabled=false;
 });
 
-function renderAll(){render();renderGuests();renderDrafts()}
+/* ---- photos of Ivor ---- */
+const thumb=(id,w)=>`https://drive.google.com/thumbnail?id=${encodeURIComponent(id)}&sz=w${w}`;
+const isApprover=()=>me().toLowerCase()===APPROVER.toLowerCase();
+function renderPhotos(){
+  /* Mum's picks so far, place by place */
+  $("#picks").innerHTML=`<h3>${esc(APPROVER)}'s choices</h3>`+(PLACES.length?`<ul>${PLACES.map(pl=>{
+    const ch=photos.filter(p=>p.approvedFor.includes(pl));
+    return `<li>${ch.length?ch.map(p=>`<img src="${thumb(p.fileId,120)}" alt="">`).join(""):""}<span><b>${esc(pl)}</b><br>${ch.length?esc(ch.map(p=>p.caption||"Photo").join(", ")):`<span class="none">Not chosen yet</span>`}</span></li>`}).join("")}</ul>`:"");
+  const list=$("#photoList");
+  if(typing()&&document.activeElement.closest("#photoList"))return;
+  const kept={};list.querySelectorAll("input,select").forEach(i=>{if(i.value)kept[i.id]=i.value});
+  if(!photos.length){list.innerHTML=`<p class="empty" style="grid-column:1/-1">${loaded?"No photos yet. Add the first ones above.":"Loading…"}</p>`;return}
+  const mum=isApprover();
+  list.innerHTML=photos.map(p=>{
+    const sg=suggestions.filter(s=>s.photoId===p.id);
+    return `<figure class="photo">
+      <a class="pic" href="https://drive.google.com/file/d/${encodeURIComponent(p.fileId)}/view" target="_blank" rel="noopener"><img src="${thumb(p.fileId,800)}" alt="${esc(p.caption||"Photo of Ivor")}" loading="lazy"></a>
+      <figcaption>${p.caption?`<span>${esc(p.caption)}</span>`:""}<small>${p.addedBy?`Added by ${esc(p.addedBy)}`:"Added"}</small></figcaption>
+      ${p.approvedFor.length?`<div class="approved" aria-label="${esc(APPROVER)} approved for">${p.approvedFor.map(x=>`<span>${esc(APPROVER)}: ${esc(x)}</span>`).join("")}</div>`:""}
+      ${sg.length?`<ul class="sugg">${sg.map(s=>`<li><b>${esc(s.name||"Someone")}</b> suggests <b>${esc(s.place)}</b>${s.note?`: ${esc(s.note)}`:""}</li>`).join("")}</ul>`:""}
+      <form class="sform" data-photo="${p.id}">
+        <label class="vh" for="pl-${p.id}">Where should it go?</label>
+        <select id="pl-${p.id}"><option value="">Suggest a place…</option>${PLACES.map(x=>`<option>${esc(x)}</option>`).join("")}</select>
+        <label class="vh" for="pn-${p.id}">Note</label>
+        <input id="pn-${p.id}" placeholder="Why? (optional)" autocomplete="off">
+        <button type="submit">Suggest</button>
+      </form>
+      ${mum?`<div class="approve"><span class="lbl">Approve for (tap to tick or untick)</span><div class="chips">${PLACES.map(x=>`<button class="chip" data-ap="${p.id}" data-place="${esc(x)}" aria-pressed="${p.approvedFor.includes(x)}">${esc(x)}</button>`).join("")}</div></div>`:""}
+      <div><button class="link" data-prm="${p.id}" data-confirm="0">Remove photo</button></div>
+    </figure>`}).join("");
+  for(const k in kept){const i=document.getElementById(k);if(i)i.value=kept[k]}
+}
+$("#photoList").addEventListener("submit",async e=>{
+  e.preventDefault(); const f=e.target.closest(".sform"); if(!f)return;
+  const id=f.dataset.photo, place=$("#pl-"+id).value, note=$("#pn-"+id).value.trim();
+  if(!place){toast("Choose a place first");$("#pl-"+id).focus();return}
+  const btn=f.querySelector("button"); btn.disabled=true; document.activeElement.blur();
+  if(await change("addSuggestion",[{photoId:id,place,note,name:me()}],"Suggestion added")){const a=$("#pl-"+id),b=$("#pn-"+id);if(a)a.value="";if(b)b.value=""}
+  btn.disabled=false;
+});
+$("#photoList").addEventListener("click",async e=>{
+  const ap=e.target.closest("[data-ap]");
+  if(ap){const p=photos.find(x=>x.id===ap.dataset.ap);if(!p)return;const pl=ap.dataset.place,on=!p.approvedFor.includes(pl);
+    p.approvedFor=on?[...p.approvedFor,pl]:p.approvedFor.filter(x=>x!==pl);renderPhotos();
+    await change("approvePhoto",[p.id,pl,on,me()],on?`Approved for ${pl}`:`Approval removed`);return}
+  const rm=e.target.closest("[data-prm]");
+  if(rm){if(rm.dataset.confirm==="0"){rm.dataset.confirm="1";rm.textContent="Tap again to remove";return}
+    const id=rm.dataset.prm;photos=photos.filter(x=>x.id!==id);renderPhotos();await change("removePhoto",[id,me()],"Photo removed")}
+});
+/* shrink each photo on the device before sending (long edge 2400px is plenty for print) */
+function shrink(file){return new Promise((ok,bad)=>{
+  const url=URL.createObjectURL(file),img=new Image();
+  img.onload=()=>{const max=2400,s=Math.min(1,max/Math.max(img.naturalWidth,img.naturalHeight));
+    const c=document.createElement("canvas");c.width=Math.round(img.naturalWidth*s);c.height=Math.round(img.naturalHeight*s);
+    c.getContext("2d").drawImage(img,0,0,c.width,c.height);URL.revokeObjectURL(url);ok(c.toDataURL("image/jpeg",0.9))};
+  img.onerror=()=>{URL.revokeObjectURL(url);bad(new Error(`${file.name} couldn't be read. Try saving it as a JPEG first.`))};
+  img.src=url})}
+$("#addPhoto").addEventListener("submit",async e=>{
+  e.preventDefault(); const files=[...$("#pFiles").files]; if(!files.length)return;
+  const btn=e.target.querySelector("button"), st=$("#pStatus"), caption=$("#pCaption").value.trim(); btn.disabled=true;
+  let done=0;
+  for(const f of files){
+    st.textContent=`Uploading ${done+1} of ${files.length}…`;
+    try{const data=await shrink(f); if(await change("addPhoto",[{data,caption,addedBy:me()}]))done++}
+    catch(err){toast(err.message)}
+  }
+  st.textContent=done?`${done} photo${done>1?"s":""} added`:"";
+  if(done){$("#pFiles").value="";$("#pCaption").value=""}
+  btn.disabled=false;
+});
+
+function renderAll(){render();renderGuests();renderDrafts();renderPhotos()}
 renderAll();
 refresh();
 </script>
