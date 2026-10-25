@@ -73,6 +73,8 @@ section.group h2 small{font-family:var(--body);font-size:13px;color:var(--muted)
 .detail li label{display:flex;gap:10px;align-items:flex-start;cursor:pointer}
 .detail li input{margin-top:4px;accent-color:var(--done);width:16px;height:16px;padding:0}
 .detail li.checked span{color:var(--muted);text-decoration:line-through}
+.addstep{display:flex;gap:8px}
+.addstep input{flex:1 1 auto}
 .assign{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .assign input{flex:1 1 160px}
 .notes{display:flex;flex-direction:column;gap:6px}
@@ -385,7 +387,7 @@ function render(){
   const g=$("#groups");
   if(!total){g.innerHTML=`<p class="empty">${loaded?"No tasks yet. Add the first one below.":"Loading the family's to-do list…"}</p>`;return}
   /* keep unsaved notes and names someone is part-way through */
-  const kept={};g.querySelectorAll("textarea,.assign input").forEach(i=>{const t=tasks.find(x=>x.id===i.dataset.id);const saved=i.tagName==="TEXTAREA"?(t&&t.notes||""):(t&&t.assignee||"");if(i.value!==saved)kept[i.id]=i.value});
+  const kept={};g.querySelectorAll("textarea,.assign input,.addstep input").forEach(i=>{const t=tasks.find(x=>x.id===i.dataset.id);const saved=i.tagName==="TEXTAREA"?(t&&t.notes||""):i.closest(".addstep")?"":(t&&t.assignee||"");if(i.value!==saved)kept[i.id]=i.value});
   const focused=document.activeElement&&g.contains(document.activeElement)?document.activeElement.id:null;
   let html="";
   for(const s of SECTIONS){
@@ -410,6 +412,7 @@ function render(){
         </div>
         ${isOpen?`<div class="detail">
           ${steps.length?`<ul>${steps.map((x,i)=>`<li class="${x.done?"checked":""}"><label><input type="checkbox" id="s-${t.id}-${i}" data-act="step" data-id="${t.id}" data-i="${i}" ${x.done?"checked":""}><span>${esc(x.text)}</span></label></li>`).join("")}</ul>`:""}
+          <div class="addstep"><label for="ns-${t.id}" class="vh">New step for ${esc(t.title)}</label><input id="ns-${t.id}" data-id="${t.id}" data-act="newstep" placeholder="Add a step…" autocomplete="off"><button data-act="addstep" data-id="${t.id}">Add</button></div>
           <div class="assign">
             <span class="lbl">Who's doing this</span>
             ${FAMILY.map(n=>`<button class="chip" data-act="pick" data-name="${esc(n)}" data-id="${t.id}" aria-pressed="${t.assignee===n}">${esc(n)}</button>`).join("")}
@@ -440,6 +443,12 @@ function render(){
 }
 
 function patchLocal(id,p){const t=tasks.find(x=>x.id===id);if(t)Object.assign(t,p);render()}
+async function addStep(id){
+  const el=$("#ns-"+id); const text=el?el.value.trim():""; if(!text){if(el)el.focus();return}
+  el.value=""; el.blur();
+  if(!await change("addStep",[id,text],"Step added")){const i=$("#ns-"+id);if(i)i.value=text}
+}
+$("#groups").addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target.dataset.act==="newstep"){e.preventDefault();addStep(e.target.dataset.id)}});
 async function saveNotes(id){
   const el=$("#n-"+id),t=tasks.find(x=>x.id===id); if(!el||!t||(t.notes||"")===el.value)return;
   await change("updateTask",[id,{notes:el.value}],"Note saved");
@@ -454,6 +463,7 @@ $("#groups").addEventListener("click",async e=>{
   if(a==="unassign"){patchLocal(id,{assignee:""});await change("updateTask",[id,{assignee:""}],"Unassigned")}
   if(a==="pick"){const v=b.dataset.name;if(t.assignee===v)return;patchLocal(id,{assignee:v});await change("updateTask",[id,{assignee:v}],`Assigned to ${v}`)}
   if(a==="savenotes")await saveNotes(id);
+  if(a==="addstep")await addStep(id);
   if(a==="del"){
     if(b.dataset.confirm==="0"){b.dataset.confirm="1";b.textContent="Tap again to remove";return}
     tasks=tasks.filter(x=>x.id!==id);render();await change("removeTask",[id,me()],"Removed");
