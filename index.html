@@ -211,6 +211,7 @@ tr.tellrow td{background:var(--soft)}
     <div class="guests-head">
       <h2>Who to invite</h2>
       <p>Add anyone who should hear about the funeral, with whatever contact details you have: mobile, email, or their Facebook or Instagram name. Once someone has been told, tap <b>Not yet</b> to note who contacted them, how and when.</p>
+      <p>To ask people whether they'd like to come, send them this link. Their answers appear in the list below. <span class="chips" style="display:inline-flex;vertical-align:middle"><button class="chip" id="copyRsvp" type="button">Copy the link</button></span> <small class="sub" id="rsvpLink"></small></p>
     </div>
     <form class="add" id="addGuest">
       <div class="fields">
@@ -516,12 +517,23 @@ function renderGuests(){
         <div class="chips"><button class="primary" data-g="savetell" data-id="${g.id}">Save</button><button data-g="cancel" data-id="${g.id}">Cancel</button></div>
       </div></td></tr>`:"";
     return `<tr>
-    <td><strong>${esc(g.name)}</strong>${g.relation?`<br><small class="sub">${esc(g.relation)}</small>`:""}${g.addedBy?`<br><small class="sub">Added by ${esc(g.addedBy)}</small>`:""}</td>
+    <td><strong>${esc(g.name)}</strong>${g.relation?`<br><small class="sub">${esc(g.relation)}</small>`:""}${g.addedBy?`<br><small class="sub">Added by ${esc(g.addedBy)}</small>`:""}${g.rsvp?`<br><span class="told">Coming: ${esc(g.rsvp)}${g.rsvp!=="No"&&g.rsvpPeople?` · ${g.rsvpPeople} ${g.rsvpPeople===1?"person":"people"}`:""}${g.rsvpWake?` · Wake: ${esc(g.rsvpWake)}`:""}</span>`:""}</td>
     <td>${contact}</td>
     <td class="status">${status}</td>
     <td><button class="link" data-g="del" data-id="${g.id}" data-confirm="0">Remove</button></td></tr>${form}`}).join("")+
-    `<tr><td colspan="4" style="color:var(--muted);font-size:13px">${guests.length} people · ${told} contacted</td></tr>`;
+    `<tr><td colspan="4" style="color:var(--muted);font-size:13px">${guests.length} people · ${told} contacted${rsvpSummary()}</td></tr>`;
 }
+/* replies from the "Let us know" link (rsvp.html) */
+function rsvpSummary(){
+  const r=guests.filter(g=>g.rsvp); if(!r.length)return "";
+  const sum=(list)=>list.reduce((n,g)=>n+(g.rsvpPeople||1),0);
+  const yes=r.filter(g=>g.rsvp==="Yes"), maybe=r.filter(g=>g.rsvp==="Not sure yet"), wake=r.filter(g=>g.rsvp!=="No"&&g.rsvpWake==="Yes");
+  return `<br>${r.length} replied · coming: ${sum(yes)} ${sum(yes)===1?"person":"people"}${maybe.length?` (+${sum(maybe)} not sure)`:""} · at the wake: ${sum(wake)} · can't come: ${r.filter(g=>g.rsvp==="No").length}`;
+}
+const RSVP_URL=new URL("rsvp.html",location.href.split("#")[0]).href;
+$("#rsvpLink").textContent=RSVP_URL;
+$("#copyRsvp").onclick=async()=>{try{await navigator.clipboard.writeText(RSVP_URL);$("#copyRsvp").textContent="Copied"}catch(e){$("#copyRsvp").textContent="Copy failed: select the link"}
+  setTimeout(()=>{$("#copyRsvp").textContent="Copy the link"},2500)};
 $("#guestRows").addEventListener("click",async e=>{
   const b=e.target.closest("[data-g]"); if(!b)return; const g=guests.find(x=>x.id===b.dataset.id); if(!g)return;
   if(b.dataset.g==="tell"){telling=g.id;renderGuests();return}
