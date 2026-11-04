@@ -99,6 +99,8 @@ td a{color:var(--accent)}
 .sub{color:var(--muted);font-size:12px}
 .told{font-size:13px;color:var(--done);font-weight:600}
 tr.tellrow td{background:var(--soft)}
+td.party input{width:64px;padding:6px 8px;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px}
+tr.gtotal td{background:var(--soft);font-weight:600}
 .tell{display:flex;flex-direction:column;gap:10px}
 .tell .lbl{font-size:13px;font-weight:600;color:var(--muted)}
 .tell .chips{display:flex;flex-wrap:wrap;gap:6px}
@@ -211,6 +213,7 @@ tr.tellrow td{background:var(--soft)}
     <div class="guests-head">
       <h2>Who to invite</h2>
       <p>Add anyone who should hear about the funeral, with whatever contact details you have: mobile, email, or their Facebook or Instagram name. Once someone has been told, tap <b>Not yet</b> to note who contacted them, how and when.</p>
+      <p>Use the <b>Coming</b> box to note how many people are coming on each invite. It is only for us, you can change it at any time, and the total is at the bottom of the list.</p>
     </div>
     <form class="add" id="addGuest">
       <div class="fields">
@@ -224,8 +227,8 @@ tr.tellrow td{background:var(--soft)}
     </form>
     <div class="gtable">
       <table>
-        <thead><tr><th>Name</th><th>Contact details</th><th>Contacted?</th><th><span class="vh">Remove</span></th></tr></thead>
-        <tbody id="guestRows"><tr><td colspan="4" class="empty">Loading…</td></tr></tbody>
+        <thead><tr><th>Name</th><th>Coming</th><th>Contact details</th><th>Contacted?</th><th><span class="vh">Remove</span></th></tr></thead>
+        <tbody id="guestRows"><tr><td colspan="5" class="empty">Loading…</td></tr></tbody>
       </table>
     </div>
   </div>
@@ -494,7 +497,7 @@ function renderGuests(){
   const told=guests.filter(g=>g.told).length;
   $("#guestCount").textContent=guests.length?`(${guests.length})`:"";
   const tb=$("#guestRows");
-  if(!guests.length){tb.innerHTML=`<tr><td colspan="4" class="empty">${loaded?"No names yet. Add the first person above.":"Loading…"}</td></tr>`;return}
+  if(!guests.length){tb.innerHTML=`<tr><td colspan="5" class="empty">${loaded?"No names yet. Add the first person above.":"Loading…"}</td></tr>`;return}
   if(typing()&&document.activeElement.closest("#guestRows"))return;
   tb.innerHTML=guests.map(g=>{
     const contact=[g.mobile&&`<a href="tel:${esc(g.mobile.replace(/\s+/g,""))}">${esc(g.mobile)}</a>`,g.email&&`<a href="mailto:${esc(g.email)}" style="word-break:break-all">${esc(g.email)}</a>`,g.socials&&esc(g.socials)].filter(Boolean).join("<br>")||`<span style="color:var(--muted)">None yet</span>`;
@@ -502,7 +505,7 @@ function renderGuests(){
       ?`<span class="told">${esc(g.toldBy||"Someone")}${g.toldHow?" · "+esc(g.toldHow):""}${g.toldOn?" · "+nice(g.toldOn):""}</span><br><button class="link" data-g="untell" data-id="${g.id}">Undo</button>`
       :`<button data-g="tell" data-id="${g.id}" aria-pressed="false">Not yet</button>`;
     const by=FAMILY.includes(me())?me():FAMILY[0];
-    const form=telling===g.id&&!g.told?`<tr class="tellrow"><td colspan="4"><div class="tell">
+    const form=telling===g.id&&!g.told?`<tr class="tellrow"><td colspan="5"><div class="tell">
         <span class="lbl">Who contacted ${esc(g.name)}?</span>
         <div class="chips">${FAMILY.map(n=>`<button class="chip" data-g="who" data-name="${esc(n)}" data-id="${g.id}" aria-pressed="${n===by}">${esc(n)}</button>`).join("")}</div>
         <div class="tellfields">
@@ -513,11 +516,22 @@ function renderGuests(){
       </div></td></tr>`:"";
     return `<tr>
     <td><strong>${esc(g.name)}</strong>${g.relation?`<br><small class="sub">${esc(g.relation)}</small>`:""}${g.addedBy?`<br><small class="sub">Added by ${esc(g.addedBy)}</small>`:""}</td>
+    <td class="party"><input type="number" min="0" max="99" inputmode="numeric" data-party="${g.id}" value="${esc(g.party??"")}" aria-label="How many people are coming with ${esc(g.name)}"></td>
     <td>${contact}</td>
     <td class="status">${status}</td>
     <td><button class="link" data-g="del" data-id="${g.id}" data-confirm="0">Remove</button></td></tr>${form}`}).join("")+
-    `<tr><td colspan="4" style="color:var(--muted);font-size:13px">${guests.length} people · ${told} contacted</td></tr>`;
+    `<tr class="gtotal"><td>Total coming</td><td id="partyTotal">${partyTotal()}</td><td colspan="3" style="color:var(--muted);font-size:13px;font-weight:400">${guests.length} invites · ${told} contacted</td></tr>`;
 }
+/* the "Coming" boxes: a rough count for the family, blank ones simply aren't added in */
+const partyTotal=()=>guests.reduce((n,g)=>n+(Number(g.party)||0),0);
+$("#guestRows").addEventListener("input",e=>{
+  const id=e.target.dataset.party; if(!id)return; const g=guests.find(x=>x.id===id); if(!g)return;
+  g.party=e.target.value; $("#partyTotal").textContent=partyTotal();
+});
+$("#guestRows").addEventListener("change",async e=>{
+  const id=e.target.dataset.party; if(!id)return;
+  e.target.blur(); await change("setParty",[id,e.target.value]);
+});
 $("#guestRows").addEventListener("click",async e=>{
   const b=e.target.closest("[data-g]"); if(!b)return; const g=guests.find(x=>x.id===b.dataset.id); if(!g)return;
   if(b.dataset.g==="tell"){telling=g.id;renderGuests();return}
