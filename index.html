@@ -101,6 +101,10 @@ td a{color:var(--accent)}
 tr.tellrow td{background:var(--soft)}
 td.party input{width:64px;padding:6px 8px;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px}
 tr.gtotal td{background:var(--soft);font-weight:600}
+td.came button{font-size:13px;padding:4px 10px;min-height:30px;border-radius:99px;white-space:nowrap}
+td.came button[aria-pressed="true"]{background:var(--done);color:var(--surface);border-color:var(--done)}
+.cametxt{font-size:13px;color:var(--done);font-weight:600;white-space:nowrap}
+.walkin{display:inline-block;margin-top:2px;font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--accent)}
 .tell{display:flex;flex-direction:column;gap:10px}
 .tell .lbl{font-size:13px;font-weight:600;color:var(--muted)}
 .tell .chips{display:flex;flex-wrap:wrap;gap:6px}
@@ -227,10 +231,23 @@ tr.gtotal td{background:var(--soft);font-weight:600}
     </form>
     <div class="gtable">
       <table>
-        <thead><tr><th>Name</th><th>Coming</th><th>Contact details</th><th>Contacted?</th><th><span class="vh">Remove</span></th></tr></thead>
-        <tbody id="guestRows"><tr><td colspan="5" class="empty">Loading…</td></tr></tbody>
+        <thead><tr><th>Name</th><th>Coming</th><th>Came?</th><th>Contact details</th><th>Contacted?</th><th><span class="vh">Remove</span></th></tr></thead>
+        <tbody id="guestRows"><tr><td colspan="6" class="empty">Loading…</td></tr></tbody>
       </table>
     </div>
+    <div class="guests-head" style="margin-top:6px">
+      <p><b>On the day:</b> Charl, Ben or Tom can tick <b>Came?</b> for everyone who came, and add anyone who came without being on the list as a walk-in. Everyone ticked will get the thank-you card by email a day or two after the funeral. <span id="dayHint"></span></p>
+    </div>
+    <form class="add" id="addWalkin" hidden>
+      <span style="font-weight:600">Add a walk-in</span>
+      <div class="fields">
+        <input id="wName" placeholder="Name" required>
+        <input id="wEmail" type="email" placeholder="Email address (for the thank-you card)" autocomplete="off">
+        <input id="wMobile" type="tel" placeholder="Mobile number" autocomplete="off">
+        <input id="wRel" placeholder="How they knew Ivor (optional)">
+      </div>
+      <div><button class="primary" type="submit">Add walk-in</button></div>
+    </form>
   </div>
 
   <div id="panelDrafts" class="panel" role="tabpanel" hidden>
@@ -497,7 +514,7 @@ function renderGuests(){
   const told=guests.filter(g=>g.told).length;
   $("#guestCount").textContent=guests.length?`(${guests.length})`:"";
   const tb=$("#guestRows");
-  if(!guests.length){tb.innerHTML=`<tr><td colspan="5" class="empty">${loaded?"No names yet. Add the first person above.":"Loading…"}</td></tr>`;return}
+  if(!guests.length){tb.innerHTML=`<tr><td colspan="6" class="empty">${loaded?"No names yet. Add the first person above.":"Loading…"}</td></tr>`;return}
   if(typing()&&document.activeElement.closest("#guestRows"))return;
   tb.innerHTML=guests.map(g=>{
     const contact=[g.mobile&&`<a href="tel:${esc(g.mobile.replace(/\s+/g,""))}">${esc(g.mobile)}</a>`,g.email&&`<a href="mailto:${esc(g.email)}" style="word-break:break-all">${esc(g.email)}</a>`,g.socials&&esc(g.socials)].filter(Boolean).join("<br>")||`<span style="color:var(--muted)">None yet</span>`;
@@ -505,7 +522,7 @@ function renderGuests(){
       ?`<span class="told">${esc(g.toldBy||"Someone")}${g.toldHow?" · "+esc(g.toldHow):""}${g.toldOn?" · "+nice(g.toldOn):""}</span><br><button class="link" data-g="untell" data-id="${g.id}">Undo</button>`
       :`<button data-g="tell" data-id="${g.id}" aria-pressed="false">Not yet</button>`;
     const by=FAMILY.includes(me())?me():FAMILY[0];
-    const form=telling===g.id&&!g.told?`<tr class="tellrow"><td colspan="5"><div class="tell">
+    const form=telling===g.id&&!g.told?`<tr class="tellrow"><td colspan="6"><div class="tell">
         <span class="lbl">Who contacted ${esc(g.name)}?</span>
         <div class="chips">${FAMILY.map(n=>`<button class="chip" data-g="who" data-name="${esc(n)}" data-id="${g.id}" aria-pressed="${n===by}">${esc(n)}</button>`).join("")}</div>
         <div class="tellfields">
@@ -515,12 +532,13 @@ function renderGuests(){
         <div class="chips"><button class="primary" data-g="savetell" data-id="${g.id}">Save</button><button data-g="cancel" data-id="${g.id}">Cancel</button></div>
       </div></td></tr>`:"";
     return `<tr>
-    <td><strong>${esc(g.name)}</strong>${g.relation?`<br><small class="sub">${esc(g.relation)}</small>`:""}${g.addedBy?`<br><small class="sub">Added by ${esc(g.addedBy)}</small>`:""}</td>
+    <td><strong>${esc(g.name)}</strong>${g.relation?`<br><small class="sub">${esc(g.relation)}</small>`:""}${g.walkin?`<br><small class="walkin">Walk-in</small>`:g.addedBy?`<br><small class="sub">Added by ${esc(g.addedBy)}</small>`:""}</td>
     <td class="party"><input type="number" min="0" max="99" inputmode="numeric" data-party="${g.id}" value="${esc(g.party??"")}" aria-label="How many people are coming with ${esc(g.name)}"></td>
+    <td class="came">${cameCell(g)}</td>
     <td>${contact}</td>
     <td class="status">${status}</td>
     <td><button class="link" data-g="del" data-id="${g.id}" data-confirm="0">Remove</button></td></tr>${form}`}).join("")+
-    `<tr class="gtotal"><td>Total coming</td><td id="partyTotal">${partyTotal()}</td><td colspan="3" style="color:var(--muted);font-size:13px;font-weight:400">${guests.length} invites · ${told} contacted</td></tr>`;
+    `<tr class="gtotal"><td>Total coming</td><td id="partyTotal">${partyTotal()}</td><td>${cameTotal()}</td><td colspan="3" style="color:var(--muted);font-size:13px;font-weight:400">${guests.length} invites · ${told} contacted${cameSummary()}</td></tr>`;
 }
 /* the "Coming" boxes: a rough count for the family, blank ones simply aren't added in */
 const partyTotal=()=>guests.reduce((n,g)=>n+(Number(g.party)||0),0);
@@ -531,6 +549,26 @@ $("#guestRows").addEventListener("input",e=>{
 $("#guestRows").addEventListener("change",async e=>{
   const id=e.target.dataset.party; if(!id)return;
   e.target.blur(); await change("setParty",[id,e.target.value]);
+});
+/* "Came?" on the day: only Charl, Ben and Tom can tick, everyone else sees who came */
+const ON_THE_DAY=["charl","ben","tom"];
+const canTick=()=>ON_THE_DAY.includes(me().toLowerCase());
+const cameCell=g=>canTick()
+  ?`<button data-g="came" data-id="${g.id}" aria-pressed="${!!g.came}">${g.came?"✓ Came":"Tick"}</button>`
+  :g.came?`<span class="cametxt">✓ Came</span>`:`<span style="color:var(--muted)">–</span>`;
+const cameTotal=()=>{const n=guests.filter(g=>g.came).length;return n?`${n} came`:""};
+const cameSummary=()=>{const w=guests.filter(g=>g.walkin).length;return w?` · ${w} walk-in${w===1?"":"s"}`:""};
+function showDayTools(){ $("#addWalkin").hidden=!canTick(); $("#dayHint").textContent=canTick()?"":"(To tick or add walk-ins, put Charl, Ben or Tom as your name at the top.)"; }
+myNameEl.addEventListener("input",()=>{showDayTools();renderGuests()});
+showDayTools();
+$("#addWalkin").addEventListener("submit",async e=>{
+  e.preventDefault();
+  const name=$("#wName").value.trim(); if(!name)return;
+  const btn=e.target.querySelector("button"); btn.disabled=true;
+  if(await change("addWalkIn",[{name,email:$("#wEmail").value.trim(),mobile:$("#wMobile").value.trim(),relation:$("#wRel").value.trim(),addedBy:me()}],`${name} added as a walk-in`)){
+    ["#wName","#wEmail","#wMobile","#wRel"].forEach(s=>$(s).value="");$("#wName").focus();
+  }
+  btn.disabled=false;
 });
 $("#guestRows").addEventListener("click",async e=>{
   const b=e.target.closest("[data-g]"); if(!b)return; const g=guests.find(x=>x.id===b.dataset.id); if(!g)return;
@@ -544,6 +582,8 @@ $("#guestRows").addEventListener("click",async e=>{
     await change("setTold",[g.id,true,info],`${g.name} marked as contacted`); return;
   }
   if(b.dataset.g==="untell"){g.told=false;renderGuests();await change("setTold",[g.id,false]);return}
+  if(b.dataset.g==="came"){const on=!g.came; g.came=on; renderGuests(); await change("setCame",[g.id,on,me()],on?`${g.name} ticked as came`:""); return}
+  if(b.dataset.g==="came"){const on=!g.came; g.came=on; renderGuests(); await change("setCame",[g.id,on,me()],on?`${g.name} ticked as came`:""); return}
   if(b.dataset.g==="del"){
     if(b.dataset.confirm==="0"){b.dataset.confirm="1";b.textContent="Tap again";return}
     guests=guests.filter(x=>x.id!==g.id);renderGuests();await change("removeGuest",[g.id,me()],"Removed");
