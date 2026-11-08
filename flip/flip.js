@@ -30,7 +30,7 @@
     const portrait = flip.getOrientation() === "portrait";
     let text;
     if (i === 0) text = "Front";
-    else if (i === total - 1) text = "Back";
+    else if (i === total - 1) text = total === 2 ? "Message" : "Back";
     else if (portrait || i + 1 >= total - 1) text = "Page " + (i + 1);
     else text = "Pages " + (i + 1) + " and " + (i + 2);
     status.textContent = text + " · " + book.label;
